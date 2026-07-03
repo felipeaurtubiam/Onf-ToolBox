@@ -6,6 +6,7 @@ Portal interno con herramientas de ON*NET FIBRA para uso del equipo.
 
 - `index.html` — portal de entrada, lista las herramientas disponibles.
 - `dashboard-sla-eecc/` — Dashboard de SLA por EECC (datos en `payload.json`, actualizado automaticamente por `Copia_Consolidado_EECC.ps1`).
+- `portal-baremos/` — Portal de Baremos & Precios del contrato PEXT INFRACO (estatico, datos embebidos en el HTML; sin pipeline).
 - `assets/gate.js` — gate de acceso con contrasena compartida (client-side).
 
 ## Agregar una nueva herramienta
@@ -16,8 +17,8 @@ Portal interno con herramientas de ON*NET FIBRA para uso del equipo.
 
 ## Nota sobre seguridad
 
-El gate de contrasena es client-side (SHA-256 en el navegador). GitHub Pages es hosting estatico y no soporta validacion server-side como Netlify Edge Functions. Es un filtro basico, no seguridad real — revisar una solucion de hosting/autenticacion definitiva a futuro.
+El gate de contrasena es client-side (SHA-256 en el navegador). Es un filtro basico, no seguridad real. Plan a futuro: **Cloudflare Access** (login real por email/PIN, gratis hasta 50 usuarios) + pasar el repositorio a privado.
 
 ## Hosting
 
-Repositorio publico en GitHub, publicado con GitHub Pages.
+Publicado con **Cloudflare Pages** (`onf-toolbox.pages.dev`), conectado al repositorio de GitHub. Cada push reconstruye el sitio automaticamente. El pipeline `Copia_Consolidado_EECC.ps1` hace `git push` a GitHub y Cloudflare redespliega.
