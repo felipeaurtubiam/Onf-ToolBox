@@ -1,0 +1,5 @@
+.DS_Store
+Thumbs.db
+
+# Handoffs se centralizan fuera del repo (../_Handoffs/); no deben commitearse
+Handoff_*.md

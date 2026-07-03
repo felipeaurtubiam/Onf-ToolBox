@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Dashboard SLA EECC · ON*NET FIBRA</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<script src="../assets/gate.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --morado:#201751; --cyan:#06EFFF; --txt:#191919; --txt-soft:#5A5E72;
+  --bg:#F4F5F8; --card:#FFFFFF; --border:#E5E7EB;
+  --ok:#2E7D32; --warn:#F9A825; --crit:#C62828;
+  --c1:#06EFFF; --c2:#F9A825; --c3:#E91E63;
+  --c1s:#7A9CA8; --c2s:#C2A878; --c3s:#B77A92;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Open Sans','Segoe UI',sans-serif;background:var(--bg);color:var(--txt)}
+.header{background:var(--morado);color:#fff;padding:18px 28px;display:flex;align-items:center;gap:16px;border-left:4px solid var(--cyan)}
+.header .ast{color:var(--cyan);font-size:28px;line-height:1}
+.header .title{font-weight:700;font-size:20px;letter-spacing:.3px}
+.header .sub{margin-left:auto;font-size:13px;opacity:.85}
+.header .updated{margin-left:auto;text-align:right;font-size:11px;opacity:.85;line-height:1.4}
+.header .updated b{display:block;font-size:13px;opacity:1;font-weight:600}
+.brand{display:flex;align-items:center;gap:10px;padding:6px 12px;background:rgba(255,255,255,.06);border-radius:6px}
+.brand b{font-weight:800}
+.tabs{display:flex;gap:0;background:var(--card);border-bottom:1px solid var(--border)}
+.tab{padding:14px 22px;cursor:pointer;font-size:13px;font-weight:600;color:var(--txt-soft);border-bottom:3px solid transparent;user-select:none}
+.tab.active{color:var(--morado);border-bottom-color:var(--cyan);background:#FAFBFC}
+.tab:hover:not(.active){background:#F7F8FA}
+.subtabs{display:none;padding:8px 24px;background:#FAFBFC;border-bottom:1px solid var(--border);gap:8px;align-items:center}
+.subtabs.show{display:flex}
+.subtabs .lbl{font-size:11px;color:var(--txt-soft);font-weight:700;text-transform:uppercase;letter-spacing:.3px;margin-right:8px}
+.subtabs .stab{padding:6px 14px;cursor:pointer;font-size:12px;font-weight:600;color:var(--txt-soft);border:1px solid var(--border);border-radius:5px;background:#fff;user-select:none}
+.subtabs .stab.active{background:var(--morado);color:#fff;border-color:var(--morado)}
+.subtabs .stab:hover:not(.active){background:#F4F5F8}
+.filters-det{border-bottom:1px solid var(--border);background:#FAFBFC}
+.filters-det > summary{display:none;list-style:none;cursor:pointer;padding:12px 16px;font-size:13px;font-weight:600;color:var(--morado);user-select:none}
+.filters-det > summary::-webkit-details-marker{display:none}
+.filters-det > summary::after{content:"▾";float:right;transition:transform .2s}
+.filters-det[open] > summary::after{transform:rotate(180deg)}
+.filters{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;padding:14px 24px;background:#FAFBFC;align-items:start}
+.filters.no-tipo{grid-template-columns:repeat(5,1fr)}
+.fld{display:flex;flex-direction:column;gap:4px}
+.fld label{font-size:11px;color:var(--txt-soft);font-weight:600;text-transform:uppercase;letter-spacing:.3px}
+.fld select,.fld input{padding:7px 10px;font-size:13px;border:1px solid var(--border);border-radius:5px;background:#fff;font-family:inherit}
+.toggle{display:flex;background:#fff;border:1px solid var(--border);border-radius:5px;overflow:hidden}
+.toggle button{flex:1;padding:7px 8px;background:transparent;border:0;cursor:pointer;font-size:12px;font-weight:600;color:var(--txt-soft)}
+.toggle button.on{background:var(--morado);color:#fff}
+.chk{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--txt-soft)}
+.dd{position:relative}
+.dd .dd-btn{padding:7px 28px 7px 10px;font-size:13px;border:1px solid var(--border);border-radius:5px;background:#fff;cursor:pointer;text-align:left;width:100%;font-family:inherit;color:var(--txt);position:relative}
+.dd .dd-btn::after{content:"";position:absolute;right:10px;top:50%;width:6px;height:6px;border-right:1.5px solid var(--txt-soft);border-bottom:1.5px solid var(--txt-soft);transform:translateY(-70%) rotate(45deg)}
+.dd .dd-panel{display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1px solid var(--border);border-radius:6px;box-shadow:0 6px 16px rgba(0,0,0,.08);z-index:50;max-height:240px;overflow-y:auto;padding:6px 0}
+.dd.open .dd-panel{display:block}
+.dd .dd-item{display:flex;align-items:center;gap:8px;padding:6px 10px;font-size:13px;color:var(--txt);cursor:pointer;user-select:none}
+.dd .dd-item:hover{background:#F4F5F8}
+.dd .dd-item input{margin:0}
+.dd .dd-all{border-bottom:1px solid var(--border);font-weight:600;color:var(--morado)}
+.main{display:grid;grid-template-columns:1fr 280px;gap:16px;padding:20px 24px}
+.panel{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;display:flex;flex-direction:column}
+.panel h3{margin:0 0 12px;font-size:13px;color:var(--txt-soft);font-weight:700;text-transform:uppercase;letter-spacing:.4px}
+.chart-wrap{position:relative;height:380px}
+/* En el layout principal, el chart llena todo el alto disponible del panel */
+.main .chart-wrap{flex:1;height:auto;min-height:380px}
+.chart-scroll{overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}
+.chart-scroll-inner{position:relative;height:100%}
+.kpis-col{display:flex;flex-direction:column;gap:10px;position:relative}
+.kpis{display:flex;flex-direction:column;gap:12px}
+.kpis-note{font-size:11px;color:var(--txt-soft);line-height:1.5;padding:10px 12px;background:#F4F5F8;border-radius:6px;border-left:3px solid var(--cyan)}
+.kpis-note b{color:var(--morado);font-weight:600}
+.kpis-info{align-self:flex-end;position:relative;display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--morado);color:#fff;font-size:13px;font-weight:700;cursor:help;font-family:Georgia,serif;font-style:italic;user-select:none}
+.kpis-info:hover .kpis-tip,.kpis-info:focus .kpis-tip{visibility:visible;opacity:1}
+.kpis-tip{visibility:hidden;opacity:0;transition:opacity .15s;position:absolute;right:0;top:calc(100% + 8px);width:280px;padding:10px 12px;background:#191919;color:#fff;font-size:11px;font-weight:400;font-style:normal;font-family:inherit;line-height:1.5;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.2);z-index:100;text-align:left;pointer-events:none}
+.kpis-tip b{color:var(--cyan);font-weight:600}
+.kpis-tip::before{content:"";position:absolute;bottom:100%;right:8px;border:6px solid transparent;border-bottom-color:#191919}
+/* Ocultar el ícono de tooltip: se muestra siempre la nota */
+.kpis-info{display:none}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;position:relative;overflow:hidden}
+.kpi .lbl{font-size:11px;color:var(--txt-soft);font-weight:700;letter-spacing:.3px;text-transform:uppercase}
+.kpi .val{font-size:30px;font-weight:800;color:var(--morado);margin:4px 0 2px;line-height:1}
+.kpi .delta{font-size:12px;font-weight:600}
+.kpi .delta.up{color:var(--ok)}
+.kpi .delta.dn{color:var(--crit)}
+.kpi .meta{font-size:11px;color:var(--txt-soft);margin-top:4px}
+.kpi .spark-wrap{position:relative;height:34px;margin-top:6px}
+.kpi .spark-wrap canvas{position:absolute;inset:0}
+.bottom{padding:0 24px 24px}
+.loader{padding:60px 40px;text-align:center;color:var(--txt-soft)}
+.loader h2{color:var(--morado);margin:0 0 8px}
+
+/* ---------- Gate de acceso ---------- */
+.gate{position:fixed;inset:0;background:linear-gradient(135deg,#201751 0%,#3a2a7a 100%);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px}
+.gate-card{background:#fff;border-radius:12px;padding:32px 28px;max-width:360px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.3);text-align:center}
+.gate-card .ast{color:var(--cyan);font-size:36px;line-height:1;margin-bottom:12px}
+.gate-card .brand{display:inline-block;padding:6px 14px;background:var(--morado);color:#fff;border-radius:6px;font-size:13px;font-weight:700;margin-bottom:20px}
+.gate-card h2{margin:0 0 6px;color:var(--morado);font-size:18px}
+.gate-card p{margin:0 0 20px;color:var(--txt-soft);font-size:13px}
+.gate-input{width:100%;padding:12px 14px;font-size:15px;border:1px solid var(--border);border-radius:8px;font-family:inherit;box-sizing:border-box;transition:border-color .15s}
+.gate-input:focus{outline:none;border-color:var(--morado)}
+.gate-btn{margin-top:12px;width:100%;padding:12px;background:var(--morado);color:#fff;border:0;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .15s}
+.gate-btn:hover{background:#2d2265}
+.gate-err{margin-top:12px;color:var(--crit);font-size:12px;font-weight:600;min-height:16px}
+
+/* ---------- Responsive ---------- */
+@media(max-width:1000px){
+  .main{grid-template-columns:1fr}
+  .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+  .chart-wrap{height:340px}
+}
+@media(max-width:900px){
+  .filters{grid-template-columns:repeat(3,1fr)}
+  .filters.no-tipo{grid-template-columns:repeat(3,1fr)}
+}
+@media(max-width:700px){
+  .header{padding:12px 16px;gap:10px;flex-wrap:wrap}
+  .header .ast{font-size:22px}
+  .header .title{font-size:15px}
+  .header .updated{font-size:10px;margin-left:auto}
+  .header .updated b{font-size:11px}
+  .brand{padding:4px 8px;font-size:12px}
+  .tabs{overflow-x:auto;overflow-y:hidden;flex-wrap:nowrap;-webkit-overflow-scrolling:touch}
+  .tab{padding:12px 14px;font-size:12px;white-space:nowrap}
+  .subtabs{overflow-x:auto;padding:8px 16px}
+  .subtabs .stab{white-space:nowrap;flex-shrink:0}
+  .filters{grid-template-columns:repeat(2,1fr);padding:12px 16px;gap:10px}
+  .filters.no-tipo{grid-template-columns:repeat(2,1fr)}
+  .main{padding:14px 16px;gap:12px}
+  .bottom{padding:0 16px 16px}
+  .panel{padding:12px}
+  .chart-wrap{height:280px}
+  .kpi .val{font-size:22px}
+  .kpi .lbl{font-size:10px}
+  .kpi .delta{font-size:10px}
+  .kpi .meta{font-size:10px}
+  .kpis{grid-template-columns:repeat(3,1fr);gap:8px}
+  .kpi{padding:10px}
+}
+@media(max-width:480px){
+  /* Filtros en accordion */
+  .filters-det > summary{display:block}
+  .filters-det:not([open]) .filters{display:none}
+  .filters{grid-template-columns:repeat(2,1fr);padding:12px 16px;background:#fff}
+  .filters.no-tipo{grid-template-columns:repeat(2,1fr)}
+  /* KPIs siempre en 3 columnas lado a lado */
+  .kpis{grid-template-columns:repeat(3,1fr);gap:6px}
+  .kpi{padding:8px}
+  .kpi .val{font-size:18px;margin:2px 0}
+  .kpi .lbl{font-size:9px;letter-spacing:0}
+  .kpi .delta{font-size:9px}
+  .kpi .meta{font-size:9px}
+  .kpi .spark-wrap{height:24px}
+  .chart-wrap{height:260px}
+  /* Volumen: scroll horizontal + ancho minimo para espaciar barras */
+  .chart-scroll-inner{min-width:720px}
+  .header .updated{width:100%;text-align:left;margin-left:0;margin-top:4px}
+}
+</style>
+</head>
+<body>
+
+<div class="gate" id="gate">
+  <div class="gate-card">
+    <div class="ast">&#10034;</div>
+    <span class="brand"><b>ON*NET</b> FIBRA</span>
+    <h2>Acceso restringido</h2>
+    <p>Ingres&aacute; la contrase&ntilde;a para ver el dashboard de SLA.</p>
+    <input type="password" id="gateInput" class="gate-input" placeholder="Contrase&ntilde;a" autocomplete="off">
+    <button type="button" id="gateBtn" class="gate-btn">Ingresar</button>
+    <div class="gate-err" id="gateErr"></div>
+  </div>
+</div>
+
+<div class="header">
+  <span class="ast">&#10034;</span>
+  <div class="brand"><b>ON*NET</b> FIBRA</div>
+  <div class="title">Control de SLA · Empresas Contratistas</div>
+  <div class="updated"><span>Última actualización</span><b id="hdrUpdated">—</b></div>
+</div>
+
+<div id="app" style="display:none">
+<div class="tabs" id="tabs">
+  <div class="tab active" data-tab="C">SLA 10/20/36 hrs &middot; Cr&iacute;tica + Fibra Oscura</div>
+  <div class="tab" data-tab="E">SLA 12/24/48 hrs &middot; Est&aacute;ndar</div>
+  <div class="tab" data-tab="R">SLA 12/24/48 hrs &middot; Reclamo</div>
+  <div class="tab" data-tab="A">Detalle por agencia</div>
+</div>
+
+<div class="subtabs" id="subtabs">
+  <span class="lbl">Tipo:</span>
+  <div class="stab active" data-sub="C">Cr&iacute;tica + Fibra Oscura</div>
+  <div class="stab" data-sub="E">Est&aacute;ndar</div>
+  <div class="stab" data-sub="R">Reclamo</div>
+</div>
+
+<details class="filters-det" id="filtersDet" open>
+<summary>Filtros</summary>
+<div class="filters" id="filters">
+  <div class="fld"><label>Mes desde</label><select id="fDesde"></select></div>
+  <div class="fld"><label>Mes hasta</label><select id="fHasta"></select></div>
+  <div class="fld"><label>EECC</label><div class="dd" id="ddEECC"><button class="dd-btn" type="button">Todos</button><div class="dd-panel"></div></div></div>
+  <div class="fld"><label>Agencia</label><div class="dd" id="ddAgencia"><button class="dd-btn" type="button">Todas</button><div class="dd-panel"></div></div></div>
+  <div class="fld" id="fldTipo"><label>Tipo Ticket</label><div class="dd" id="ddTipo"><button class="dd-btn" type="button">Todos</button><div class="dd-panel"></div></div></div>
+  <div class="fld">
+    <label>Medici&oacute;n</label>
+    <div class="toggle" id="fMet">
+      <button data-m="SPR">SPR</button>
+      <button data-m="CPR" class="on">CPR</button>
+      <button data-m="AMBOS">Ambos</button>
+    </div>
+    <label class="chk" style="margin-top:6px"><input type="checkbox" id="fMetas" checked> Mostrar metas</label>
+  </div>
+</div>
+</details>
+
+<div class="main">
+  <div class="panel">
+    <h3 id="chartTitle">Evoluci&oacute;n SLA &middot; Cr&iacute;tica</h3>
+    <div class="chart-wrap"><canvas id="lineChart"></canvas></div>
+  </div>
+  <div class="kpis-col">
+    <span class="kpis-info" id="kpisInfo" tabindex="0" aria-label="Información sobre la vista">i<span class="kpis-tip" id="kpisTip"></span></span>
+    <div class="kpis" id="kpis"></div>
+    <div class="kpis-note" id="kpisNote"></div>
+  </div>
+</div>
+
+<div class="bottom">
+  <div class="panel">
+    <h3 id="volTitle">Volumen mensual de tickets por EECC</h3>
+    <div class="chart-wrap chart-scroll" style="height:280px">
+      <div class="chart-scroll-inner"><canvas id="volChart"></canvas></div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div id="loader" class="loader">
+  <h2>Cargando datos…</h2>
+  <p>Leyendo <code>payload.json</code></p>
+</div>
+
+<script>
+// ---------- Gate de acceso ----------
+const PWD_HASH = "26109b7674fb1b20821c3ca895d3cac977e5bb8af5397bef1ab3a9f7b97f0491";
+const GATE_KEY = "onnet_sla_ok";
+
+async function sha256Hex(text){
+  const buf = new TextEncoder().encode(text);
+  const hash = await crypto.subtle.digest("SHA-256", buf);
+  return [...new Uint8Array(hash)].map(b => b.toString(16).padStart(2,"0")).join("");
+}
+
+function openGate(){
+  document.getElementById("gate").style.display = "none";
+  document.body.style.overflow = "";
+  // Recién ahora arrancamos la carga del dashboard
+  iniciarDashboard();
+}
+
+async function tryPassword(pwd){
+  const err = document.getElementById("gateErr");
+  const h = await sha256Hex(pwd);
+  if(h === PWD_HASH){
+    try { sessionStorage.setItem(GATE_KEY, "1"); } catch(_){}
+    openGate();
+  } else {
+    err.textContent = "Contraseña incorrecta";
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const gate = document.getElementById("gate");
+  document.body.style.overflow = "hidden";
+  // Sesión previamente validada
+  try {
+    if(sessionStorage.getItem(GATE_KEY) === "1"){
+      openGate();
+      return;
+    }
+  } catch(_){}
+  // Setup handlers
+  const input = document.getElementById("gateInput");
+  const btn = document.getElementById("gateBtn");
+  btn.onclick = () => tryPassword(input.value);
+  input.addEventListener("keydown", e => {
+    if(e.key === "Enter") tryPassword(input.value);
+    if(e.key !== "Enter") document.getElementById("gateErr").textContent = "";
+  });
+  setTimeout(() => input.focus(), 100);
+});
+
+let DATA;
+
+const TAB_TIPOS = { C: ["Critica","Fibra Oscura"], E: ["Estandar"], R: ["Reclamo"] };
+const TAB_UMBRALES = { C: ["10","20","36"], E: ["12","24","48"], R: ["12","24","48"] };
+const TAB_METAS = {
+  C: {"10":60,"20":90,"36":100},
+  E: {"12":60,"24":70,"48":100},
+  R: {"12":60,"24":70,"48":100},
+};
+const COLOR = {CPR:["#06EFFF","#F9A825","#E91E63"], SPR:["#7A9CA8","#C2A878","#B77A92"]};
+const EECC_COLOR = {COBRA:"#06EFFF",DOMINION:"#201751",LARI:"#F9A825",TRAZA:"#E91E63",ZENER:"#5A5E72"};
+const AGENCIA_COLORS = ["#06EFFF","#201751","#F9A825","#E91E63","#5A5E72","#2E7D32","#7A9CA8","#C2A878","#B77A92","#9C27B0","#00838F","#BF360C"];
+const TIPO_COLOR = {"Critica":"#E91E63","Fibra Oscura":"#201751","Estandar":"#06EFFF","Reclamo":"#F9A825"};
+const TIPO_ORDEN = ["Critica","Fibra Oscura","Estandar","Reclamo"];
+const MES_LBL = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+function lblPeriodo(p){const [y,m]=p.split("-");return `${MES_LBL[+m-1]}-${y.slice(2)}`}
+function lblSemana(s){const [y,w]=s.split("-W");return `S${w}-${y.slice(2)}`}
+
+let state, lineChart, volChart, sparkCharts=[];
+let couplingLock = false;  // evita loops en coupling EECC<->Agencia
+
+// Tipo/umbrales/metas efectivos: si tab === "A", usa el subTab
+function currentTipoKey(){ return state.tab === "A" ? state.subTab : state.tab; }
+function currentTipos(){ return TAB_TIPOS[currentTipoKey()]; }
+function currentUmbrales(){ return TAB_UMBRALES[currentTipoKey()]; }
+function currentMetas(){ return TAB_METAS[currentTipoKey()]; }
+
+function periodosRango(){
+  return DATA.meta.periodos.filter(p => p >= state.desde && p <= state.hasta);
+}
+function semanasRango(){
+  // Semanas cuyo mes-lunes esta dentro del rango desde/hasta
+  const map = DATA.meta.semana_a_periodo || {};
+  return DATA.meta.semanas.filter(s => {
+    const p = map[s];
+    return p && p >= state.desde && p <= state.hasta;
+  });
+}
+function rowsFiltradas(){
+  const ps = new Set(periodosRango());
+  const tiposTab = new Set(currentTipos());
+  const tiposSel = new Set([...state.tipo].filter(t => tiposTab.has(t)));
+  return DATA.agregado.filter(r =>
+    ps.has(r.periodo) &&
+    state.eecc.has(r.eecc) &&
+    state.agencia.has(r.agencia) &&
+    tiposSel.has(r.tipo)
+  );
+}
+function rowsSemanales(){
+  const ss = new Set(semanasRango());
+  const tiposTab = new Set(currentTipos());
+  const tiposSel = new Set([...state.tipo].filter(t => tiposTab.has(t)));
+  return DATA.semanal.filter(r =>
+    ss.has(r.semana) &&
+    state.eecc.has(r.eecc) &&
+    state.agencia.has(r.agencia) &&
+    tiposSel.has(r.tipo)
+  );
+}
+
+function serieMensual(metrica){
+  const ps = periodosRango();
+  const umbrales = currentUmbrales();
+  const acc = {};
+  for(const p of ps) for(const u of umbrales) acc[`${p}|${u}`] = {c:0,t:0};
+  for(const r of rowsFiltradas()){
+    if(r.metrica !== metrica) continue;
+    const k = `${r.periodo}|${r.umbral}`;
+    if(!(k in acc)) continue;
+    acc[k].c += r.cumple; acc[k].t += r.total;
+  }
+  const series = umbrales.map(u => ({
+    umbral: u,
+    data: ps.map(p => {
+      const v = acc[`${p}|${u}`];
+      return v.t > 0 ? +(100*v.c/v.t).toFixed(2) : null;
+    })
+  }));
+  return {labels: ps.map(lblPeriodo), series};
+}
+
+function serieSemanal(metrica){
+  const ss = semanasRango();
+  const umbrales = currentUmbrales();
+  const acc = {};
+  for(const s of ss) for(const u of umbrales) acc[`${s}|${u}`] = {c:0,t:0};
+  for(const r of rowsSemanales()){
+    if(r.metrica !== metrica) continue;
+    const k = `${r.semana}|${r.umbral}`;
+    if(!(k in acc)) continue;
+    acc[k].c += r.cumple; acc[k].t += r.total;
+  }
+  const series = umbrales.map(u => ({
+    umbral: u,
+    data: ss.map(s => {
+      const v = acc[`${s}|${u}`];
+      return v.t > 0 ? +(100*v.c/v.t).toFixed(2) : null;
+    })
+  }));
+  return {labels: ss.map(lblSemana), series};
+}
+
+function kpiData(metrica){
+  const ps = periodosRango();
+  const umbrales = [...currentUmbrales()].reverse();
+  const rows = rowsFiltradas();
+  const out = [];
+  for(const u of umbrales){
+    // spark: {pct, total} por periodo o null
+    const sparkFull = ps.map(p => {
+      let c=0,t=0;
+      for(const r of rows){
+        if(r.umbral !== u || r.metrica !== metrica) continue;
+        if(r.periodo === p){c+=r.cumple;t+=r.total}
+      }
+      return t>0 ? {pct: 100*c/t, total: t} : null;
+    });
+    const spark = sparkFull.map(v => v ? v.pct : null);
+    let idxUlt = -1, idxPrev = -1;
+    for(let i = ps.length - 1; i >= 0; i--){
+      if(sparkFull[i] != null){
+        if(idxUlt < 0) idxUlt = i;
+        else { idxPrev = i; break; }
+      }
+    }
+    const pAct = idxUlt >= 0 ? sparkFull[idxUlt].pct : null;
+    const pPrev = idxPrev >= 0 ? sparkFull[idxPrev].pct : null;
+    const totalUlt = idxUlt >= 0 ? sparkFull[idxUlt].total : 0;
+    const meta = currentMetas()[u];
+    out.push({umbral:u, valor:pAct, delta:(pAct!=null && pPrev!=null) ? pAct - pPrev : null, meta, spark, unidad:"mes",
+              periodoUlt: idxUlt >= 0 ? ps[idxUlt] : null, totalUlt});
+  }
+  return out;
+}
+
+function kpiDataSemanal(metrica){
+  const ss = semanasRango();
+  const umbrales = [...currentUmbrales()].reverse();
+  const rows = rowsSemanales();
+  const out = [];
+  for(const u of umbrales){
+    const sparkFull = ss.map(s => {
+      let c=0,t=0;
+      for(const r of rows){
+        if(r.umbral !== u || r.metrica !== metrica) continue;
+        if(r.semana === s){c+=r.cumple;t+=r.total}
+      }
+      return t>0 ? {pct: 100*c/t, total: t} : null;
+    });
+    const spark = sparkFull.map(v => v ? v.pct : null);
+    let idxUlt = -1, idxPrev = -1;
+    for(let i = ss.length - 1; i >= 0; i--){
+      if(sparkFull[i] != null){
+        if(idxUlt < 0) idxUlt = i;
+        else { idxPrev = i; break; }
+      }
+    }
+    const pAct = idxUlt >= 0 ? sparkFull[idxUlt].pct : null;
+    const pPrev = idxPrev >= 0 ? sparkFull[idxPrev].pct : null;
+    const totalUlt = idxUlt >= 0 ? sparkFull[idxUlt].total : 0;
+    const meta = currentMetas()[u];
+    out.push({umbral:u, valor:pAct, delta:(pAct!=null && pPrev!=null) ? pAct - pPrev : null, meta, spark, unidad:"sem",
+              semanaUlt: idxUlt >= 0 ? ss[idxUlt] : null, totalUlt});
+  }
+  return out;
+}
+
+function renderLine(){
+  const ctx = document.getElementById("lineChart");
+  const esSemanal = state.tab === "A";
+  const eje = esSemanal ? semanasRango() : periodosRango();
+  const labels = esSemanal ? eje.map(lblSemana) : eje.map(lblPeriodo);
+  const datasets = [];
+  const colors = COLOR.CPR;
+  const colorsS = COLOR.SPR;
+  const umbrales = currentUmbrales();
+  const metas = currentMetas();
+
+  const showSPR = state.metrica==="SPR" || state.metrica==="AMBOS";
+  const showCPR = state.metrica==="CPR" || state.metrica==="AMBOS";
+  const serieFn = esSemanal ? serieSemanal : serieMensual;
+
+  if(showCPR){
+    const {series} = serieFn("CPR");
+    series.forEach((s,i) => datasets.push({
+      label:`CPR ≤${s.umbral}h`, data:s.data, borderColor:colors[i],
+      backgroundColor:colors[i]+"20", tension:.3, borderWidth:2.5, pointRadius:esSemanal?2:3
+    }));
+  }
+  if(showSPR){
+    const {series} = serieFn("SPR");
+    series.forEach((s,i) => datasets.push({
+      label:`SPR ≤${s.umbral}h`, data:s.data, borderColor:colorsS[i],
+      borderDash:[5,4], tension:.3, borderWidth:2, pointRadius:esSemanal?1:2
+    }));
+  }
+  if(state.metas){
+    umbrales.forEach((u,i) => datasets.push({
+      label:`Meta ${u}h (${metas[u]}%)`, data: labels.map(()=>metas[u]),
+      borderColor:colors[i], borderDash:[2,3], borderWidth:1, pointRadius:0, fill:false
+    }));
+  }
+
+  if(lineChart) lineChart.destroy();
+  lineChart = new Chart(ctx, {
+    type:"line",
+    data:{labels, datasets},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{position:"bottom",labels:{boxWidth:14,font:{size:11}}}},
+      scales:{y:{min:0,max:110,ticks:{callback:v=>v+"%"}}}
+    }
+  });
+  const escalaLbl = esSemanal ? " (semanal)" : "";
+  document.getElementById("chartTitle").textContent = "Evolución SLA · " + currentTipos().join(" + ") + escalaLbl;
+}
+
+function renderKPIs(){
+  const cont = document.getElementById("kpis");
+  cont.innerHTML = "";
+  sparkCharts.forEach(c=>c.destroy()); sparkCharts=[];
+  const metrica = state.metrica==="SPR" ? "SPR" : "CPR";
+  const esSemanal = state.tab === "A";
+  const ds = esSemanal ? kpiDataSemanal(metrica) : kpiData(metrica);
+  const unidadLbl = esSemanal ? "semana ant." : "mes ant.";
+  ds.forEach((k,idx) => {
+    const div = document.createElement("div");
+    div.className = "kpi";
+    const valTxt = k.valor!=null ? k.valor.toFixed(1)+"%" : "—";
+    const delta = k.delta!=null ? (k.delta>=0?"+":"")+k.delta.toFixed(1)+" pp vs "+unidadLbl : "—";
+    const deltaClass = k.delta!=null && k.delta>=0 ? "up":"dn";
+    const brecha = k.valor!=null ? (k.valor - k.meta).toFixed(1)+" pp vs meta "+k.meta+"%" : "sin datos en el rango";
+    // Etiqueta de referencia temporal
+    let refTxt = "";
+    if(esSemanal && k.semanaUlt) refTxt = lblSemana(k.semanaUlt);
+    else if(!esSemanal && k.periodoUlt) refTxt = lblPeriodo(k.periodoUlt);
+    const nTxt = (k.totalUlt != null && k.totalUlt > 0) ? `n = ${k.totalUlt.toLocaleString()} tickets` : "";
+    div.innerHTML = `
+      <div class="lbl">≤ ${k.umbral} horas · ${metrica}${refTxt ? ' · <span style="color:var(--txt)">'+refTxt+'</span>' : ''}</div>
+      <div class="val">${valTxt}</div>
+      <div class="delta ${deltaClass}">${delta}</div>
+      <div class="meta">${brecha}</div>
+      ${nTxt ? '<div class="meta" style="margin-top:2px;font-weight:600">'+nTxt+'</div>' : ''}
+      <div class="spark-wrap"><canvas id="spark${idx}"></canvas></div>`;
+    cont.appendChild(div);
+    const sc = new Chart(document.getElementById("spark"+idx),{
+      type:"line",
+      data:{labels:k.spark.map((_,i)=>i), datasets:[{data:k.spark,borderColor:"#201751",borderWidth:1.5,pointRadius:0,tension:.3,fill:false}]},
+      options:{plugins:{legend:{display:false}},scales:{x:{display:false},y:{display:false,min:0,max:100}},responsive:true,maintainAspectRatio:false}
+    });
+    sparkCharts.push(sc);
+  });
+  // Texto informativo (mismo mensaje en la nota mobile y en el tooltip desktop)
+  const html = esSemanal
+    ? 'Vista <b>semanal</b>: el gráfico de evolución y los KPIs se calculan por semana ISO. ' +
+      'El valor "n = tickets" indica el tamaño de la muestra de la última semana con datos — ' +
+      'porcentajes altos con n bajo pueden reflejar poca variabilidad estadística.'
+    : 'Vista <b>mensual</b>: el gráfico de evolución y los KPIs se calculan por mes de resolución. ' +
+      'El valor "n = tickets" indica el tamaño de la muestra del último mes con datos.';
+  const note = document.getElementById("kpisNote");
+  if(note) note.innerHTML = html;
+  const tip = document.getElementById("kpisTip");
+  if(tip) tip.innerHTML = html;
+}
+
+function renderVolumen(){
+  const ps = periodosRango();
+  const porTipo = state.tab === "A";
+  let datasets, titulo;
+  if(porTipo){
+    // Volumen por tipo de ticket (agregado sobre las agencias seleccionadas)
+    const ags = state.agencia;
+    const tipos = TIPO_ORDEN.filter(t => DATA.meta.tipos.includes(t));
+    datasets = tipos.map(t => ({
+      label:t,
+      backgroundColor: TIPO_COLOR[t] || "#999",
+      data: ps.map(p => {
+        let n = 0;
+        for(const r of DATA.volumen_mensual_agencia_tipo){
+          if(r.periodo===p && r.tipo===t && ags.has(r.agencia)) n += r.tickets;
+        }
+        return n;
+      })
+    }));
+    titulo = "Volumen mensual de tickets por tipo (agencias seleccionadas)";
+  } else {
+    const eeccArr = [...state.eecc];
+    datasets = eeccArr.map(e => ({
+      label:e,
+      backgroundColor: EECC_COLOR[e] || "#999",
+      data: ps.map(p => {
+        let t = 0;
+        for(const r of DATA.volumen_mensual){
+          if(r.periodo===p && r.eecc===e) t += r.tickets;
+        }
+        return t;
+      })
+    }));
+    titulo = "Volumen mensual de tickets por EECC";
+  }
+  document.getElementById("volTitle").textContent = titulo;
+  if(volChart) volChart.destroy();
+  // Plugin: total sobre cada barra apilada
+  const totalOnTop = {
+    id:"totalOnTop",
+    afterDatasetsDraw(chart){
+      const {ctx, scales:{x,y}} = chart;
+      const dss = chart.data.datasets;
+      if(!dss.length) return;
+      const nPeriodos = chart.data.labels.length;
+      ctx.save();
+      ctx.font = "600 11px 'Open Sans', 'Segoe UI', sans-serif";
+      ctx.fillStyle = "#191919";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "bottom";
+      for(let i=0; i<nPeriodos; i++){
+        let total = 0;
+        for(const d of dss){ const v = d.data[i]; if(typeof v === "number") total += v; }
+        if(total === 0) continue;
+        const cx = x.getPixelForValue(i);
+        const cy = y.getPixelForValue(total);
+        ctx.fillText(total.toLocaleString(), cx, cy - 4);
+      }
+      ctx.restore();
+    }
+  };
+  // Barras mas angostas + mas gap entre meses para que el total no se junte
+  datasets.forEach(d => { d.categoryPercentage = 0.55; d.barPercentage = 0.95; });
+  volChart = new Chart(document.getElementById("volChart"),{
+    type:"bar",
+    data:{labels: ps.map(lblPeriodo), datasets},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      layout:{padding:{top:18}},
+      plugins:{legend:{position:"bottom",labels:{boxWidth:14,font:{size:11}}}},
+      scales:{x:{stacked:true},y:{stacked:true,ticks:{callback:v=>v.toLocaleString()}}}
+    },
+    plugins:[totalOnTop]
+  });
+}
+
+function renderAll(){renderLine();renderKPIs();renderVolumen();}
+
+function buildDropdown(id, items, sel, labelSingular, labelPlural, onChangeExtra){
+  const dd = document.getElementById(id);
+  const btn = dd.querySelector(".dd-btn");
+  const panel = dd.querySelector(".dd-panel");
+  function refreshLabel(){
+    if(sel.size === items.length || sel.size === 0) btn.textContent = "Todos: " + labelPlural;
+    else if(sel.size === 1) btn.textContent = [...sel][0];
+    else btn.textContent = sel.size + " " + labelPlural + " sel.";
+  }
+  function rebuild(){
+    panel.innerHTML = "";
+    const allChecked = items.length > 0 && sel.size === items.length;
+    const allLbl = document.createElement("label");
+    allLbl.className = "dd-item dd-all";
+    allLbl.innerHTML = `<input type="checkbox" ${allChecked?"checked":""}> Seleccionar todos`;
+    allLbl.querySelector("input").onchange = (e) => {
+      if(e.target.checked){ items.forEach(i => sel.add(i)); }
+      else { sel.clear(); }
+      rebuild(); refreshLabel();
+      if(onChangeExtra) onChangeExtra();
+      renderAll();
+    };
+    panel.appendChild(allLbl);
+    items.forEach(it => {
+      const lbl = document.createElement("label");
+      lbl.className = "dd-item";
+      lbl.innerHTML = `<input type="checkbox" ${sel.has(it)?"checked":""}> <span>${it}</span>`;
+      lbl.querySelector("input").onchange = (e) => {
+        if(e.target.checked) sel.add(it); else sel.delete(it);
+        refreshLabel();
+        if(onChangeExtra) onChangeExtra();
+        renderAll();
+        const allCb = panel.querySelector(".dd-all input");
+        allCb.checked = sel.size === items.length;
+      };
+      panel.appendChild(lbl);
+    });
+  }
+  btn.onclick = (e) => {
+    e.stopPropagation();
+    document.querySelectorAll(".dd.open").forEach(o => {if(o!==dd) o.classList.remove("open")});
+    dd.classList.toggle("open");
+  };
+  panel.onclick = (e) => e.stopPropagation();
+  refreshLabel(); rebuild();
+  dd._refresh = () => { rebuild(); refreshLabel(); };
+}
+
+// --- Coupling EECC <-> Agencia ---
+function agenciasDeEECC(){
+  const map = DATA.meta.agencia_a_eecc || {};
+  const eeccSel = state.eecc;
+  return DATA.meta.agencias.filter(a => eeccSel.has(map[a]));
+}
+function eeccDeAgencias(){
+  const map = DATA.meta.agencia_a_eecc || {};
+  const s = new Set();
+  state.agencia.forEach(a => { if(map[a]) s.add(map[a]); });
+  return s;
+}
+function syncAgenciasSegunEECC(){
+  if(couplingLock) return;
+  couplingLock = true;
+  const disponibles = agenciasDeEECC();
+  // Al cambiar EECC, seleccionar todas las agencias disponibles.
+  // Si el usuario dejo EECC vacio, disponibles=[] y state.agencia queda vacio (permitido).
+  state.agencia = new Set(disponibles);
+  buildDropdown("ddAgencia", disponibles, state.agencia, "Agencia", "agencias", syncEECCSegunAgencias);
+  couplingLock = false;
+}
+function syncEECCSegunAgencias(){
+  if(couplingLock) return;
+  couplingLock = true;
+  // EECC = union de EECC de las agencias seleccionadas. Puede quedar vacio.
+  state.eecc = eeccDeAgencias();
+  const ddEECC = document.getElementById("ddEECC");
+  if(ddEECC && ddEECC._refresh) ddEECC._refresh();
+  couplingLock = false;
+}
+
+function initFilters(){
+  const desde = document.getElementById("fDesde");
+  const hasta = document.getElementById("fHasta");
+  DATA.meta.periodos.forEach(p => {
+    desde.add(new Option(lblPeriodo(p), p));
+    hasta.add(new Option(lblPeriodo(p), p));
+  });
+  desde.value = state.desde; hasta.value = state.hasta;
+  desde.onchange = e => {state.desde = e.target.value; renderAll()};
+  hasta.onchange = e => {state.hasta = e.target.value; renderAll()};
+
+  buildDropdown("ddEECC", DATA.meta.eecc, state.eecc, "EECC", "EECC", syncAgenciasSegunEECC);
+  buildDropdown("ddAgencia", DATA.meta.agencias, state.agencia, "Agencia", "agencias", syncEECCSegunAgencias);
+  buildDropdown("ddTipo", currentTipos(), state.tipo, "Tipo", "tipos");
+
+  document.getElementById("fMetas").onchange = e => {state.metas = e.target.checked; renderAll()};
+  document.querySelectorAll("#fMet button").forEach(b => b.onclick = () => {
+    state.metrica = b.dataset.m;
+    document.querySelectorAll("#fMet button").forEach(x => x.classList.toggle("on", x===b));
+    renderAll();
+  });
+
+  document.querySelectorAll(".tab").forEach(t => t.onclick = () => {
+    document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+    t.classList.add("active");
+    state.tab = t.dataset.tab;
+    // Sub-tab visible solo en "Detalle por agencia"
+    document.getElementById("subtabs").classList.toggle("show", state.tab === "A");
+    // Filtro Tipo Ticket redundante en pestaña A (los sub-tabs ya cubren el tipo)
+    document.getElementById("fldTipo").style.display = state.tab === "A" ? "none" : "";
+    document.getElementById("filters").classList.toggle("no-tipo", state.tab === "A");
+    // Tipo default segun la key efectiva
+    const k = currentTipoKey();
+    state.tipo = new Set(k === "C" ? ["Critica"] : TAB_TIPOS[k]);
+    buildDropdown("ddTipo", TAB_TIPOS[k], state.tipo, "Tipo", "tipos");
+    renderAll();
+  });
+
+  document.querySelectorAll(".stab").forEach(t => t.onclick = () => {
+    document.querySelectorAll(".stab").forEach(x => x.classList.remove("active"));
+    t.classList.add("active");
+    state.subTab = t.dataset.sub;
+    const k = currentTipoKey();
+    // Al cambiar de sub-tab, selecciona TODOS los tipos del grupo (Critica + Fibra Oscura para C)
+    state.tipo = new Set(TAB_TIPOS[k]);
+    buildDropdown("ddTipo", TAB_TIPOS[k], state.tipo, "Tipo", "tipos");
+    renderAll();
+  });
+
+  document.addEventListener("click", () => {
+    document.querySelectorAll(".dd.open").forEach(o => o.classList.remove("open"));
+  });
+}
+
+function pintarUltimaActualizacion(){
+  const raw = DATA.meta && DATA.meta.last_update;
+  if(!raw){ document.getElementById("hdrUpdated").textContent = "—"; return; }
+  const norm = raw.replace(" ","T");
+  const d = new Date(norm);
+  if(isNaN(d)){ document.getElementById("hdrUpdated").textContent = raw; return; }
+  const pad = n => String(n).padStart(2,"0");
+  const txt = `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  document.getElementById("hdrUpdated").textContent = txt;
+}
+
+function setupFiltersAccordion(){
+  const det = document.getElementById("filtersDet");
+  if(!det) return;
+  let userToggled = false;
+  det.addEventListener("toggle", () => { if(window.innerWidth <= 480) userToggled = true; });
+  const apply = () => {
+    if(window.innerWidth > 480){
+      // Desktop: siempre abierto (el summary está oculto)
+      if(!det.hasAttribute("open")) det.setAttribute("open", "");
+      userToggled = false;
+    } else if(!userToggled){
+      // Mobile: cerrado por default (usuario puede abrir)
+      det.removeAttribute("open");
+    }
+  };
+  apply();
+  window.addEventListener("resize", apply);
+}
+
+function boot(){
+  state = {
+    tab: "C",
+    subTab: "C",
+    desde: DATA.meta.periodos[0],
+    hasta: DATA.meta.periodos[DATA.meta.periodos.length-1],
+    eecc: new Set(DATA.meta.eecc),
+    agencia: new Set(DATA.meta.agencias),
+    tipo: new Set(["Critica"]),
+    metrica: "CPR",
+    metas: true,
+  };
+  document.getElementById("loader").style.display = "none";
+  document.getElementById("app").style.display = "";
+  pintarUltimaActualizacion();
+  initFilters();
+  setupFiltersAccordion();
+  renderAll();
+}
+
+function iniciarDashboard(){
+  fetch("payload.json?v=" + Date.now())
+    .then(r => { if(!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+    .then(json => { DATA = json; boot(); })
+    .catch(err => {
+      console.error("Error cargando payload.json:", err);
+      document.getElementById("loader").innerHTML =
+        '<h2 style="color:#C62828">Error al cargar los datos</h2>' +
+        '<p>No se pudo leer <code>payload.json</code>: ' + err.message + '</p>' +
+        '<p style="color:#666">Verifica que el archivo exista en la misma carpeta que este HTML.<

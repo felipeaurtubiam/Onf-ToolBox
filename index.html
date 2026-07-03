@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>ON*NET Toolbox</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<script src="assets/gate.js"></script>
+<style>
+:root{
+  --morado:#201751; --cyan:#06EFFF; --txt:#191919; --txt-soft:#5A5E72;
+  --bg:#F4F5F8; --card:#FFFFFF; --border:#E5E7EB;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Open Sans','Segoe UI',sans-serif;background:var(--bg);color:var(--txt)}
+.header{background:var(--morado);color:#fff;padding:22px 28px;display:flex;align-items:center;gap:16px;border-left:4px solid var(--cyan)}
+.header .ast{color:var(--cyan);font-size:28px;line-height:1}
+.header .title{font-weight:700;font-size:22px;letter-spacing:.3px}
+.header .sub{margin-left:auto;font-size:13px;opacity:.85}
+.main{max-width:960px;margin:0 auto;padding:32px 24px}
+.section-title{font-size:14px;font-weight:700;color:var(--txt-soft);text-transform:uppercase;letter-spacing:.4px;margin:0 0 16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
+.tool-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px;text-decoration:none;color:var(--txt);display:flex;flex-direction:column;gap:8px;transition:box-shadow .15s,border-color .15s}
+.tool-card:hover{box-shadow:0 8px 20px rgba(32,23,81,.10);border-color:var(--morado)}
+.tool-card .icon{color:var(--cyan);background:var(--morado);width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px}
+.tool-card .name{font-weight:700;font-size:15px}
+.tool-card .desc{font-size:12.5px;color:var(--txt-soft);line-height:1.4}
+.empty-note{margin-top:24px;font-size:12.5px;color:var(--txt-soft);border:1px dashed var(--border);border-radius:8px;padding:14px 16px}
+</style>
+</head>
+<body>
+  <div class="header">
+    <span class="ast">*</span>
+    <span class="title">ON<span style="color:var(--cyan)">*</span>NET Toolbox</span>
+    <span class="sub">Herramientas internas</span>
+  </div>
+  <div class="main">
+    <p class="section-title">Herramientas disponibles</p>
+    <div class="grid">
+      <a class="tool-card" href="dashboard-sla-eecc/">
+        <div class="icon">SLA</div>
+        <div class="name">Dashboard SLA EECC</div>
+        <div class="desc">Panel de control de SLA por empresa colaboradora (EECC): cumplimiento, volumenes y detalle por agencia.</div>
+      </a>
+    </div>
+    <p class="empty-note">Nuevas herramientas se iran agregando aqui a medida que se incorporen al toolbox.</p>
+  </div>
+</body>
+</html>
